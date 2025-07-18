@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import CreateElement from "./CreateElement";
-import EditElement from "./EditElement";
 import {
   Select,
   SelectTrigger,
@@ -19,6 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { ElementManager } from "./ElementManager";
 
 const UiCreator = () => {
   const [lang, setLang] = useState<"ar" | "en" | "fr" | "">("");
@@ -111,8 +110,7 @@ const UiCreator = () => {
           إعادة تعيين
         </Button>
       </div>
-
-      <CreateElement setResult={setResult} />
+      <ElementManager mode="create" setResult={setResult} />
 
       {result.map((html, i) => (
         <div
@@ -171,7 +169,8 @@ const UiCreator = () => {
       ))}
 
       {editingIndex !== null && (
-        <EditElement
+        <ElementManager
+          mode="edit"
           html={result[editingIndex]}
           index={editingIndex}
           onUpdate={handleUpdateElement}
@@ -179,7 +178,6 @@ const UiCreator = () => {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent dir="rtl">
           <DialogHeader>

@@ -1,4 +1,4 @@
-import UiCreator from "@/components/ui-creator/UiCreator";
+import UiCreator from "@/components/UiCreator";
 
 export default async function HomePage() {
   return (
