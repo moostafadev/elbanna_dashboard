@@ -1,14 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import React, { useState, useRef, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,7 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 
-import { ElementManagerProps } from "./types";
+import { ElementManagerProps, ElementState } from "./types";
 import {
   ELEMENT_TYPES,
   COLOR_OPTIONS,
@@ -36,6 +28,151 @@ import {
   usePreviewHTML,
 } from "./hooks";
 import { parseListText } from "./utils";
+import CustomDialog from "../Custom/Dialog/CustomDialog";
+import { Textarea } from "../ui/textarea";
+import { Plus } from "lucide-react";
+
+const getElementTypeLabel = (type: string) => {
+  const labels: Record<string, string> = {
+    p: "فقرة",
+    h1: "عنوان رئيسي",
+    h2: "عنوان فرعي 1",
+    h3: "عنوان فرعي 2",
+    h4: "عنوان فرعي 3",
+    h5: "عنوان فرعي 4",
+    h6: "عنوان فرعي 5",
+    a: "رابط",
+    img: "صورة",
+    ul: "قائمة نقطية",
+    ol: "قائمة مرقمة",
+  };
+  return labels[type] || type.toUpperCase();
+};
+
+const getPlaceholderText = (type: string) => {
+  if (LIST_ELEMENT_TYPES.includes(type)) {
+    return type === "ul"
+      ? "أدخل عناصر القائمة، كل عنصر في سطر منفصل:\n* العنصر الأول\n* العنصر الثاني\n* العنصر الثالث"
+      : "أدخل عناصر القائمة، كل عنصر في سطر منفصل:\n1. العنصر الأول\n2. العنصر الثاني\n3. العنصر الثالث";
+  }
+  return "نص العنصر";
+};
+
+const ElementType = memo(
+  ({
+    updateState,
+    type,
+  }: {
+    updateState: (updates: Partial<ElementState>) => void;
+    type: string;
+  }) => {
+    return (
+      <Select
+        value={type}
+        onValueChange={(value) => updateState({ type: value })}
+        dir="rtl"
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="نوع العنصر" />
+        </SelectTrigger>
+        <SelectContent>
+          {ELEMENT_TYPES.map((type) => (
+            <SelectItem key={type} value={type}>
+              {getElementTypeLabel(type)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+);
+
+ElementType.displayName = "ElementType";
+
+const FormatButtons = memo(
+  ({ formatSelection }: { formatSelection: (className: string) => void }) => (
+    <div className="flex flex-wrap gap-2">
+      {FORMAT_BUTTONS.map((btn) => (
+        <Button
+          key={btn.className}
+          size="sm"
+          variant="outline"
+          onClick={() => formatSelection(btn.className)}
+        >
+          {btn.label}
+        </Button>
+      ))}
+    </div>
+  )
+);
+
+FormatButtons.displayName = "FormatButtons";
+
+const TeaxtareaOrInput = memo(
+  ({
+    type,
+    textAreaRef,
+    dir,
+    displayText,
+    inputRef,
+    mode,
+    updateState,
+    formattedText,
+  }: {
+    type: string;
+    textAreaRef: React.RefObject<HTMLTextAreaElement>;
+    dir: "rtl" | "ltr";
+    displayText: string;
+    inputRef: React.RefObject<HTMLInputElement>;
+    mode: "edit" | "create";
+    updateState: (updates: Partial<ElementState>) => void;
+    formattedText: string;
+  }) => {
+    const handleTextChange = useCallback(
+      (value: string) => {
+        if (LIST_ELEMENT_TYPES.includes(type)) {
+          const items = parseListText(value);
+          updateState({
+            displayText: value,
+            formattedText: mode === "edit" ? value : formattedText,
+            listItems: items,
+          });
+        } else {
+          updateState({
+            displayText: value,
+            formattedText: mode === "edit" ? value : formattedText,
+          });
+        }
+      },
+      [updateState, mode, formattedText, type]
+    );
+    if (type === "p" || LIST_ELEMENT_TYPES.includes(type)) {
+      return (
+        <Textarea
+          ref={textAreaRef}
+          rows={LIST_ELEMENT_TYPES.includes(type) ? 6 : 4}
+          dir={dir}
+          className="w-full border rounded p-2 text-sm"
+          placeholder={getPlaceholderText(type)}
+          value={displayText}
+          onChange={(e) => handleTextChange(e.target.value)}
+        />
+      );
+    } else {
+      return (
+        <Input
+          ref={inputRef}
+          dir={dir}
+          placeholder="نص العنصر"
+          value={displayText}
+          onChange={(e) => handleTextChange(e.target.value)}
+        />
+      );
+    }
+  }
+);
+
+TeaxtareaOrInput.displayName = "TeaxtareaOrInput";
 
 const ElementManager: React.FC<ElementManagerProps> = ({
   setResult,
@@ -44,15 +181,13 @@ const ElementManager: React.FC<ElementManagerProps> = ({
   onUpdate,
   onCancel,
   mode,
+  dir,
 }) => {
   const [open, setOpen] = useState(mode === "edit");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
   const { state, updateState, resetState } = useElementState(mode, html);
-
   const { handleImageUpload } = useImageHandler(updateState);
-
   const { formatSelection } = useTextFormatter(
     state,
     updateState,
@@ -81,25 +216,6 @@ const ElementManager: React.FC<ElementManagerProps> = ({
     }
   }, [mode, onCancel]);
 
-  const handleTextChange = useCallback(
-    (value: string) => {
-      if (LIST_ELEMENT_TYPES.includes(state.type)) {
-        const items = parseListText(value);
-        updateState({
-          displayText: value,
-          formattedText: mode === "edit" ? value : state.formattedText,
-          listItems: items,
-        });
-      } else {
-        updateState({
-          displayText: value,
-          formattedText: mode === "edit" ? value : state.formattedText,
-        });
-      }
-    },
-    [updateState, mode, state.formattedText, state.type]
-  );
-
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -115,100 +231,35 @@ const ElementManager: React.FC<ElementManagerProps> = ({
     [handleImageUpload]
   );
 
-  const getElementTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      p: "فقرة",
-      h1: "عنوان رئيسي",
-      h2: "عنوان فرعي",
-      h3: "عنوان فرعي 2",
-      h4: "عنوان فرعي 3",
-      h5: "عنوان فرعي 4",
-      h6: "عنوان فرعي 5",
-      a: "رابط",
-      img: "صورة",
-      ul: "قائمة نقطية",
-      ol: "قائمة مرقمة",
-    };
-    return labels[type] || type.toUpperCase();
-  };
-
-  const getPlaceholderText = () => {
-    if (LIST_ELEMENT_TYPES.includes(state.type)) {
-      return state.type === "ul"
-        ? "أدخل عناصر القائمة، كل عنصر في سطر منفصل:\n* العنصر الأول\n* العنصر الثاني\n* العنصر الثالث"
-        : "أدخل عناصر القائمة، كل عنصر في سطر منفصل:\n1. العنصر الأول\n2. العنصر الثاني\n3. العنصر الثالث";
-    }
-    return "نص العنصر";
-  };
-
   const dialogContent = (
-    <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto max-w-2xl">
-      <DialogHeader>
-        <DialogTitle>
-          {mode === "create" ? "إنشاء عنصر" : "تعديل العنصر"}
-        </DialogTitle>
-      </DialogHeader>
-
-      <div className="space-y-4">
-        <Select
-          value={state.type}
-          onValueChange={(value) => updateState({ type: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="نوع العنصر" />
-          </SelectTrigger>
-          <SelectContent>
-            {ELEMENT_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {getElementTypeLabel(type)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <>
+      <div className="flex flex-col gap-4">
+        <ElementType type={state.type} updateState={updateState} />
 
         <div className="border rounded p-3 bg-gray-50">
           <h4 className="text-sm font-medium mb-2">معاينة:</h4>
           <div
             className="min-h-[40px] bg-white p-2 rounded border"
             dangerouslySetInnerHTML={{ __html: previewHtml }}
+            dir={dir}
           />
         </div>
 
         {state.type !== "img" && (
           <>
-            {state.type === "p" || LIST_ELEMENT_TYPES.includes(state.type) ? (
-              <textarea
-                ref={textAreaRef}
-                rows={LIST_ELEMENT_TYPES.includes(state.type) ? 6 : 4}
-                dir="rtl"
-                className="w-full border rounded p-2 text-sm"
-                placeholder={getPlaceholderText()}
-                value={state.displayText}
-                onChange={(e) => handleTextChange(e.target.value)}
-              />
-            ) : (
-              <Input
-                ref={inputRef}
-                dir="rtl"
-                placeholder="نص العنصر"
-                value={state.displayText}
-                onChange={(e) => handleTextChange(e.target.value)}
-              />
-            )}
+            <TeaxtareaOrInput
+              type={state.type}
+              textAreaRef={textAreaRef}
+              dir={dir}
+              displayText={state.displayText}
+              inputRef={inputRef}
+              mode={mode}
+              formattedText={state.formattedText}
+              updateState={updateState}
+            />
 
             {!LIST_ELEMENT_TYPES.includes(state.type) && (
-              <div className="flex flex-wrap gap-2">
-                {FORMAT_BUTTONS.map((btn) => (
-                  <Button
-                    key={btn.className}
-                    size="sm"
-                    variant="outline"
-                    onClick={() => formatSelection(btn.className)}
-                  >
-                    {btn.label}
-                  </Button>
-                ))}
-              </div>
+              <FormatButtons formatSelection={formatSelection} />
             )}
           </>
         )}
@@ -302,34 +353,55 @@ const ElementManager: React.FC<ElementManagerProps> = ({
           </SelectContent>
         </Select>
       </div>
-
-      <DialogFooter>
-        <Button onClick={handleCancel} variant="outline">
-          إلغاء
-        </Button>
-        <Button onClick={handleSubmit} className="text-white">
-          {mode === "create" ? "إضافة" : "تحديث"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+    </>
   );
 
   if (mode === "edit") {
     return (
-      <Dialog open={true} onOpenChange={handleCancel}>
+      <CustomDialog
+        open={true}
+        onOpenChange={handleCancel}
+        title="تعديل العنصر"
+        footer={
+          <>
+            <Button onClick={handleCancel} variant="outline">
+              إلغاء
+            </Button>
+            <Button onClick={handleSubmit} className="text-white">
+              تحديث
+            </Button>
+          </>
+        }
+      >
         {dialogContent}
-      </Dialog>
+      </CustomDialog>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">[+] إضافة عنصر</Button>
-      </DialogTrigger>
+    <CustomDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="إنشاء عنصر"
+      trigger={
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          <Plus /> إضافة عنصر
+        </Button>
+      }
+      footer={
+        <>
+          <Button onClick={handleCancel} variant="outline">
+            إلغاء
+          </Button>
+          <Button onClick={handleSubmit} className="text-white">
+            إضافة
+          </Button>
+        </>
+      }
+    >
       {dialogContent}
-    </Dialog>
+    </CustomDialog>
   );
 };
 
-export default ElementManager;
+export default memo(ElementManager);

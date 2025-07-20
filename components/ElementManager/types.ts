@@ -5,6 +5,7 @@ export interface ElementManagerProps {
   onUpdate?: (index: number, newHtml: string) => void;
   onCancel?: () => void;
   mode: "create" | "edit";
+  dir: "rtl" | "ltr";
 }
 
 export interface ElementState {

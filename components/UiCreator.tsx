@@ -10,14 +10,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, ArrowUp, ArrowDown, RefreshCcw } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { ElementManager } from "./ElementManager";
+import CustomDialog from "./Custom/Dialog/CustomDialog";
 
 const UiCreator = () => {
   const [lang, setLang] = useState<"ar" | "en" | "fr" | "">("");
@@ -110,7 +104,7 @@ const UiCreator = () => {
           إعادة تعيين
         </Button>
       </div>
-      <ElementManager mode="create" setResult={setResult} />
+      <ElementManager mode="create" dir={dir} setResult={setResult} />
 
       {result.map((html, i) => (
         <div
@@ -171,6 +165,7 @@ const UiCreator = () => {
       {editingIndex !== null && (
         <ElementManager
           mode="edit"
+          dir={dir}
           html={result[editingIndex]}
           index={editingIndex}
           onUpdate={handleUpdateElement}
@@ -178,29 +173,34 @@ const UiCreator = () => {
         />
       )}
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle>تأكيد الحذف</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>
-              هل أنت متأكد من حذف هذا العنصر؟ هذا الإجراء لا يمكن التراجع عنه.
-            </p>
-          </div>
-          <DialogFooter>
+      <CustomDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="تأكيد الحذف"
+        footer={
+          <>
             <Button
-              variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              variant="outline"
             >
               إلغاء
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button
+              onClick={confirmDelete}
+              className="text-white"
+              variant={"destructive"}
+            >
               حذف
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="py-4">
+          <p>
+            هل أنت متأكد من حذف هذا العنصر؟ هذا الإجراء لا يمكن التراجع عنه.
+          </p>
+        </div>
+      </CustomDialog>
     </div>
   );
 };
