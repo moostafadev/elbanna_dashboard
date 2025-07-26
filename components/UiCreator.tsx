@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, ArrowUp, ArrowDown, RefreshCcw } from "lucide-react";
 import { ElementManager } from "./ElementManager";
 import CustomDialog from "./Custom/Dialog/CustomDialog";
+import InputImage from "./Custom/Inputs/InputImage";
+import { Input } from "./ui/input";
 
 const UiCreator = () => {
   const [lang, setLang] = useState<"ar" | "en" | "fr" | "">("");
@@ -21,6 +23,14 @@ const UiCreator = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [category, setCategory] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [image, setImage] = useState("");
+  const [status, setStatus] = useState<"show" | "archive">("show");
 
   const handleLangChange = (value: "ar" | "en" | "fr") => {
     setLang(value);
@@ -33,6 +43,12 @@ const UiCreator = () => {
     setResult([]);
     setEditingIndex(null);
     setHoveredIndex(null);
+    setTitle("");
+    setDesc("");
+    setCategory("");
+    setKeywords("");
+    setImage("");
+    setStatus("show");
   };
 
   const handleDelete = (index: number) => {
@@ -70,6 +86,36 @@ const UiCreator = () => {
     setResult(newResult);
   };
 
+  const handleSubmit = async () => {
+    const payload = {
+      title,
+      desc,
+      category,
+      keywords: keywords.split(",").map((k) => k.trim()),
+      image,
+      status,
+      content: result,
+    };
+
+    try {
+      const res = await fetch("/api/blog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        alert("تم حفظ التدوينة بنجاح!");
+        handleReset();
+      } else {
+        alert("حدث خطأ أثناء الحفظ.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("فشل في إرسال البيانات.");
+    }
+  };
+
   if (!lang) {
     return (
       <div className="p-4 space-y-4" dir="rtl">
@@ -89,8 +135,8 @@ const UiCreator = () => {
   }
 
   return (
-    <div dir={dir} className="p-4">
-      <div className="flex items-center justify-between mb-4">
+    <div dir={dir} className="p-4 space-y-6">
+      <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           اللغة:{" "}
           {lang === "ar"
@@ -104,6 +150,75 @@ const UiCreator = () => {
           إعادة تعيين
         </Button>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm mb-1">العنوان</label>
+          <Input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm"
+            placeholder="أدخل عنوان التدوينة"
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">الوصف</label>
+          <Input
+            type="text"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm"
+            placeholder="وصف موجز للتدوينة"
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">الفئة</label>
+          <Input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm"
+            placeholder="مثلاً: قانون الأسرة"
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">الكلمات المفتاحية</label>
+          <Input
+            type="text"
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm"
+            placeholder="مثال: طلاق، نفقة، حضانة"
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">الصورة</label>
+          <InputImage
+            updateState={(data) => {
+              if (data.href) setImage(data.href);
+              if (typeof data.loading === "boolean") setUploading(data.loading);
+            }}
+            loading={uploading}
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">الحالة</label>
+          <Select
+            value={status}
+            onValueChange={(val) => setStatus(val as "show" | "archive")}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="اختر الحالة" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="show">مرئي</SelectItem>
+              <SelectItem value="archive">مؤرشف</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <ElementManager mode="create" dir={dir} setResult={setResult} />
 
       {result.map((html, i) => (
@@ -173,6 +288,10 @@ const UiCreator = () => {
         />
       )}
 
+      <Button onClick={handleSubmit} className="mt-6">
+        حفظ التدوينة
+      </Button>
+
       <CustomDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -188,7 +307,7 @@ const UiCreator = () => {
             <Button
               onClick={confirmDelete}
               className="text-white"
-              variant={"destructive"}
+              variant="destructive"
             >
               حذف
             </Button>

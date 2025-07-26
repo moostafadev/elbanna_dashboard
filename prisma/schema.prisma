@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,8 +7,59 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Status {
+  archive
+  show
+}
+
 model Views {
   id     String   @id @default(auto()) @map("_id") @db.ObjectId
   slug   String   @unique
   count  Int
+}
+
+model Blog {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  title       String     @unique
+  desc        String
+  contentId   String     @unique @db.ObjectId
+  category    String
+  keywords    String[]
+  image       String
+  comments    Comment[]  @relation("BlogComments")
+  likes       Like[]     @relation("BlogLikes")
+  status      Status     @default(show)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model HtmlContent {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  content     String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Comment {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  uuid        String     @unique
+  name        String     
+  content     String
+  blogId      String     @db.ObjectId
+  visitorId   String     
+  likes       Int        @default(0)
+  replies     Json?      
+  blog        Blog       @relation("BlogComments", fields: [blogId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Like {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  uuid        String     @unique
+  blogId      String     @db.ObjectId
+  visitorId   String     
+  blog        Blog       @relation("BlogLikes", fields: [blogId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }

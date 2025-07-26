@@ -21,16 +21,12 @@ import {
   FORMAT_BUTTONS,
   LIST_ELEMENT_TYPES,
 } from "./constants";
-import {
-  useElementState,
-  useImageHandler,
-  useTextFormatter,
-  usePreviewHTML,
-} from "./hooks";
+import { useElementState, useTextFormatter, usePreviewHTML } from "./hooks";
 import { parseListText } from "./utils";
 import CustomDialog from "../Custom/Dialog/CustomDialog";
 import { Textarea } from "../ui/textarea";
 import { Plus } from "lucide-react";
+import InputImage from "../Custom/Inputs/InputImage";
 
 const getElementTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
@@ -187,7 +183,6 @@ const ElementManager: React.FC<ElementManagerProps> = ({
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { state, updateState, resetState } = useElementState(mode, html);
-  const { handleImageUpload } = useImageHandler(updateState);
   const { formatSelection } = useTextFormatter(
     state,
     updateState,
@@ -215,21 +210,6 @@ const ElementManager: React.FC<ElementManagerProps> = ({
       onCancel();
     }
   }, [mode, onCancel]);
-
-  const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      if (!file.type.startsWith("image/")) {
-        alert("فقط الصور مسموح بها");
-        return;
-      }
-
-      await handleImageUpload(file);
-    },
-    [handleImageUpload]
-  );
 
   const dialogContent = (
     <>
@@ -269,12 +249,7 @@ const ElementManager: React.FC<ElementManagerProps> = ({
             <label className="text-sm text-muted-foreground">
               اختر صورة من جهازك
             </label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              disabled={state.loading}
-            />
+            <InputImage loading={state.loading} updateState={updateState} />
             {state.loading && (
               <p className="text-sm text-blue-500">جاري الرفع...</p>
             )}
