@@ -3,13 +3,6 @@
 import React, { useState, useRef, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 
@@ -27,6 +20,7 @@ import CustomDialog from "../Custom/Dialog/CustomDialog";
 import { Textarea } from "../ui/textarea";
 import { Plus } from "lucide-react";
 import InputImage from "../Custom/Inputs/InputImage";
+import CustomSelect from "../Custom/Select/CustomSelect";
 
 const getElementTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
@@ -63,22 +57,15 @@ const ElementType = memo(
     type: string;
   }) => {
     return (
-      <Select
+      <CustomSelect
         value={type}
         onValueChange={(value) => updateState({ type: value })}
-        dir="rtl"
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="نوع العنصر" />
-        </SelectTrigger>
-        <SelectContent>
-          {ELEMENT_TYPES.map((type) => (
-            <SelectItem key={type} value={type}>
-              {getElementTypeLabel(type)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        items={ELEMENT_TYPES.map((option) => ({
+          label: getElementTypeLabel(option),
+          value: option,
+        }))}
+        placeholder="نوع العنصر"
+      />
     );
   }
 );
@@ -293,40 +280,26 @@ const ElementManager: React.FC<ElementManagerProps> = ({
         )}
 
         {state.type !== "img" && (
-          <Select
+          <CustomSelect
             value={state.color}
             onValueChange={(value) => updateState({ color: value })}
-            dir="rtl"
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="لون النص" />
-            </SelectTrigger>
-            <SelectContent>
-              {COLOR_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            items={COLOR_OPTIONS.map((option) => ({
+              label: option.label,
+              value: option.value,
+            }))}
+            placeholder="لون النص"
+          />
         )}
 
-        <Select
+        <CustomSelect
           value={state.space}
           onValueChange={(value) => updateState({ space: value })}
-          dir="rtl"
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="الهامش العلوي" />
-          </SelectTrigger>
-          <SelectContent>
-            {SPACING_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          items={SPACING_OPTIONS.map((option) => ({
+            label: option.label,
+            value: option.value,
+          }))}
+          placeholder="الهامش العلوي"
+        />
       </div>
     </>
   );
@@ -359,7 +332,11 @@ const ElementManager: React.FC<ElementManagerProps> = ({
       onOpenChange={setOpen}
       title="إنشاء عنصر"
       trigger={
-        <Button variant="outline" onClick={() => setOpen(true)}>
+        <Button
+          variant="outline"
+          onClick={() => setOpen(true)}
+          className="flex"
+        >
           <Plus /> إضافة عنصر
         </Button>
       }

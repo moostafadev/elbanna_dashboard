@@ -1,19 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, ArrowUp, ArrowDown, RefreshCcw } from "lucide-react";
 import { ElementManager } from "./ElementManager";
 import CustomDialog from "./Custom/Dialog/CustomDialog";
 import InputImage from "./Custom/Inputs/InputImage";
 import { Input } from "./ui/input";
+import CustomSelect from "./Custom/Select/CustomSelect";
 
 const UiCreator = () => {
   const [lang, setLang] = useState<"ar" | "en" | "fr" | "">("");
@@ -119,17 +113,19 @@ const UiCreator = () => {
   if (!lang) {
     return (
       <div className="p-4 space-y-4" dir="rtl">
-        <h2 className="text-xl font-semibold">اختر اللغة</h2>
-        <Select onValueChange={handleLangChange}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="اختر اللغة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ar">العربية</SelectItem>
-            <SelectItem value="en">الإنجليزية</SelectItem>
-            <SelectItem value="fr">الفرنسية</SelectItem>
-          </SelectContent>
-        </Select>
+        <h2 className="text-xl font-semibold">اختر لغة المدونة</h2>
+        <CustomSelect
+          onValueChange={(value) =>
+            handleLangChange(value as "ar" | "en" | "fr")
+          }
+          items={[
+            { value: "ar", label: "العربية" },
+            { value: "en", label: "الإنجليزية" },
+            { value: "fr", label: "الفرنسية" },
+          ]}
+          className="w-40"
+          placeholder="اختر اللغة"
+        />
       </div>
     );
   }
@@ -204,18 +200,15 @@ const UiCreator = () => {
         </div>
         <div>
           <label className="block text-sm mb-1">الحالة</label>
-          <Select
-            value={status}
+          <CustomSelect
             onValueChange={(val) => setStatus(val as "show" | "archive")}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="اختر الحالة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="show">مرئي</SelectItem>
-              <SelectItem value="archive">مؤرشف</SelectItem>
-            </SelectContent>
-          </Select>
+            items={[
+              { value: "show", label: "مرئي" },
+              { value: "archive", label: "مؤرشف" },
+            ]}
+            className="w-full"
+            placeholder="اختر الحالة"
+          />
         </div>
       </div>
 
@@ -288,8 +281,8 @@ const UiCreator = () => {
         />
       )}
 
-      <Button onClick={handleSubmit} className="mt-6">
-        حفظ التدوينة
+      <Button onClick={handleSubmit} className="mt-6 text-white">
+        حفظ المدونة
       </Button>
 
       <CustomDialog
