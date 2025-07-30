@@ -1,6 +1,7 @@
 import { Cairo as FontCairo } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import MainLayout from "@/components/MainLayout";
 
 const fontCairo = FontCairo({
   weight: ["300", "400", "700", "900"],
@@ -21,7 +22,7 @@ export default async function RootLayout({
           `font-cairo ${fontCairo.variable}`
         )}
       >
-        <main>{children}</main>
+        <MainLayout>{children}</MainLayout>
       </body>
     </html>
   );

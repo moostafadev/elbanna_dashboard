@@ -112,7 +112,7 @@ const UiCreator = () => {
 
   if (!lang) {
     return (
-      <div className="p-4 space-y-4" dir="rtl">
+      <div className="space-y-4" dir="rtl">
         <h2 className="text-xl font-semibold">اختر لغة المدونة</h2>
         <CustomSelect
           onValueChange={(value) =>
