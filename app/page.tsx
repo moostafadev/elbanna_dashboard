@@ -1,9 +1,5 @@
-import UiCreator from "@/components/UiCreator";
+const Page = () => {
+  return <section>لوحة التحكم</section>;
+};
 
-export default async function HomePage() {
-  return (
-    <div>
-      <UiCreator />
-    </div>
-  );
-}
+export default Page;

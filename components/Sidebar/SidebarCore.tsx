@@ -9,6 +9,7 @@ import { SidebarToggleButton } from "./SidebarToggleButton";
 import { SidebarOverlay } from "./SidebarOverlay";
 import SidebarItemNav from "./SidebarItem";
 import Link from "next/link";
+import { stroke_width } from "@/constants/styles";
 
 const SidebarCore = ({ open }: { open: boolean }) => {
   return (
@@ -17,14 +18,15 @@ const SidebarCore = ({ open }: { open: boolean }) => {
 
       <aside
         className={cn(
-          "fixed top-0 right-0 h-full shadow-md flex flex-col gap-4 bg-background duration-300 z-20",
+          "fixed top-0 right-0 h-full shadow-sm flex flex-col gap-4 bg-background duration-300 z-20",
           sidebarOpenCore(open)
         )}
       >
         {/* Toggle button */}
         <SidebarToggleButton
+          open={open}
           className={cn(
-            "text-primary/60 hover:bg-primary/10 bg-primary/20 hover:text-primary/70 absolute top-2 w-10 h-10 flex items-center justify-center p-0 duration-300 transition-[right]",
+            "text-primary/60 hover:bg-primary/20 bg-primary/10 hover:text-primary/70 absolute top-3 w-10 h-10 flex items-center justify-center p-0 duration-300 transition-[right]",
             sidebarOpenToggle(open)
           )}
         />
@@ -32,7 +34,7 @@ const SidebarCore = ({ open }: { open: boolean }) => {
         {/* Header */}
         <Link
           href={"/"}
-          className="flex items-center justify-center py-4 mx-3 border-b border-b-gray-300"
+          className="flex items-center justify-center py-4 mx-1 md:mx-3 border-b border-b-gray-300"
         >
           <Image
             src={"/logo.png"}
@@ -58,7 +60,7 @@ const SidebarCore = ({ open }: { open: boolean }) => {
         {/* Footer */}
         <div className="px-4 absolute bottom-4 right-0 w-full h-fit">
           <Button className="w-full text-red-600 hover:bg-red-50 bg-red-100 hover:text-red-700 flex items-center gap-2">
-            <LogOut />
+            <LogOut strokeWidth={stroke_width} />
             {open && <span>تسجيل خروج</span>}
           </Button>
         </div>

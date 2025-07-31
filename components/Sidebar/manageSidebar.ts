@@ -3,11 +3,13 @@ export const sidebarOpenCore = (open: boolean) => {
 };
 
 export const sidebarOpenOverlay = (open: boolean) => {
-  return open ? "w-[20%]" : "w-0";
+  return open ? "opacity-80" : "opacity-0 -z-10";
 };
 
 export const sidebarOpenToggle = (open: boolean) => {
-  return open ? "right-[264px]" : "right-[64px] md:right-[88px]";
+  return open
+    ? "right-[calc(100%+8px)] md:right-[264px]"
+    : "right-[64px] md:right-[88px]";
 };
 
 export const sidebarSelectItem = (pathname: string, href: string) => {

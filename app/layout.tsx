@@ -18,7 +18,7 @@ export default async function RootLayout({
     <html lang={"ar"} dir={"rtl"}>
       <body
         className={cn(
-          "min-h-screen antialiased",
+          "min-h-screen bg-primary/5 antialiased",
           `font-cairo ${fontCairo.variable}`
         )}
       >

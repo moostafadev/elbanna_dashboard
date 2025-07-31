@@ -19,7 +19,7 @@ export const SidebarOverlay = ({ open }: { open: boolean }) => {
   return (
     <div
       className={cn(
-        "md:hidden fixed h-full bg-gray-50 z-10 left-0",
+        "md:hidden fixed h-full bg-gray-100 z-10 left-0 top-0 duration-300 w-[20%]",
         sidebarOpenOverlay(open)
       )}
       onClick={handleClose}
