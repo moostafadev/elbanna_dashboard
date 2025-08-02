@@ -13,7 +13,7 @@ const MainLayout = async ({ children }: { children: React.ReactNode }) => {
       <SidebarCore open={sidebarOpen} />
       <main
         className={cn(
-          "!mr-16 m-2 p-4 duration-300 rounded-md shadow-sm hover:shadow-md bg-white min-h-[calc(100vh-64px-16px)]",
+          "!mr-16 m-2 p-3 md:p-4 space-y-4 md:space-y-8 duration-300 rounded-md shadow-sm hover:shadow-md bg-white min-h-[calc(100vh-64px-16px)]",
           sidebarOpen ? "md:!mr-[264px]" : "md:!mr-[88px]"
         )}
       >

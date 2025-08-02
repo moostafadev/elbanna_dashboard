@@ -58,7 +58,7 @@ const SidebarCore = ({ open }: { open: boolean }) => {
         </nav>
 
         {/* Footer */}
-        <div className="px-4 absolute bottom-4 right-0 w-full h-fit">
+        <div className="px-2 md:px-4 absolute bottom-4 right-0 w-full h-fit">
           <Button className="w-full text-red-600 hover:bg-red-50 bg-red-100 hover:text-red-700 flex items-center gap-2">
             <LogOut strokeWidth={stroke_width} />
             {open && <span>تسجيل خروج</span>}
