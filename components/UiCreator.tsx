@@ -8,9 +8,11 @@ import CustomDialog from "./Custom/Dialog/CustomDialog";
 import InputImage from "./Custom/Inputs/InputImage";
 import { Input } from "./ui/input";
 import CustomSelect from "./Custom/Select/CustomSelect";
+import { createBlog } from "@/actions/blog.actions";
+import { LANG } from "@prisma/client";
 
 const UiCreator = () => {
-  const [lang, setLang] = useState<"ar" | "en" | "fr" | "">("");
+  const [lang, setLang] = useState<LANG | "">("");
   const [dir, setDir] = useState<"rtl" | "ltr">("rtl");
   const [result, setResult] = useState<string[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -26,7 +28,7 @@ const UiCreator = () => {
   const [image, setImage] = useState("");
   const [status, setStatus] = useState<"show" | "archive">("show");
 
-  const handleLangChange = (value: "ar" | "en" | "fr") => {
+  const handleLangChange = (value: LANG) => {
     setLang(value);
     setDir(value === "ar" ? "rtl" : "ltr");
   };
@@ -81,7 +83,7 @@ const UiCreator = () => {
   };
 
   const handleSubmit = async () => {
-    const payload = {
+    const res = await createBlog({
       title,
       desc,
       category,
@@ -89,24 +91,16 @@ const UiCreator = () => {
       image,
       status,
       content: result,
-    };
+      lang,
+    });
 
-    try {
-      const res = await fetch("/api/blog", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    console.log(res);
 
-      if (res.ok) {
-        alert("تم حفظ التدوينة بنجاح!");
-        handleReset();
-      } else {
-        alert("حدث خطأ أثناء الحفظ.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("فشل في إرسال البيانات.");
+    if (res.success) {
+      alert("تم حفظ التدوينة بنجاح!");
+      handleReset();
+    } else {
+      console.log(res.error ?? "حدث خطأ أثناء الحفظ.");
     }
   };
 
@@ -115,9 +109,7 @@ const UiCreator = () => {
       <div className="space-y-4" dir="rtl">
         <h2 className="text-xl font-semibold">اختر لغة المدونة</h2>
         <CustomSelect
-          onValueChange={(value) =>
-            handleLangChange(value as "ar" | "en" | "fr")
-          }
+          onValueChange={(value) => handleLangChange(value as LANG)}
           items={[
             { value: "ar", label: "العربية" },
             { value: "en", label: "الإنجليزية" },
@@ -138,8 +130,8 @@ const UiCreator = () => {
           {lang === "ar"
             ? "العربية"
             : lang === "en"
-            ? "الإنجليزية"
-            : "الفرنسية"}
+              ? "الإنجليزية"
+              : "الفرنسية"}
         </div>
         <Button variant="destructive" size="sm" onClick={handleReset}>
           <RefreshCcw size={16} />
