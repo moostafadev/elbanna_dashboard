@@ -12,7 +12,11 @@ import {
   SESSION_MAX_AGE,
 } from "@/lib/auth/constants";
 import { authenticateAdmin } from "@/lib/auth/credentials";
-import { clearAttempts, consumeAttempt } from "@/lib/auth/rate-limit";
+import {
+  clearAttempts,
+  consumeAttempt,
+  releaseAttempt,
+} from "@/lib/auth/rate-limit";
 import { createSessionToken } from "@/lib/auth/session";
 
 const getClientIp = (): string => {
@@ -60,6 +64,7 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     });
 
     clearAttempts(ipKey);
+    releaseAttempt("global");
     return { success: true };
   } catch (error) {
     console.error("[login]", error);

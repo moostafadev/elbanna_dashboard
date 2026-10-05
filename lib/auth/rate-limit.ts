@@ -31,6 +31,15 @@ export const consumeAttempt = (key: string, max: number): boolean => {
   return true;
 };
 
+export const releaseAttempt = (key: string): void => {
+  const entry = attempts.get(key);
+
+  if (!entry) return;
+
+  if (entry.count <= 1) attempts.delete(key);
+  else entry.count -= 1;
+};
+
 export const clearAttempts = (key: string): void => {
   attempts.delete(key);
 };

@@ -36,11 +36,18 @@ export const verifySessionToken = async (
       typeof payload.email !== "string" ||
       !payload.exp ||
       payload.email !== adminEmail
-    )
+    ) {
+      console.error("[verifySession] payload mismatch", {
+        tokenEmail: payload.email,
+        adminEmail,
+        hasExp: !!payload.exp,
+      });
       return null;
+    }
 
     return { email: payload.email, expiresAt: new Date(payload.exp * 1000) };
-  } catch {
+  } catch (error) {
+    console.error("[verifySession] jwtVerify failed", error);
     return null;
   }
 };
