@@ -2,14 +2,12 @@ import React from "react";
 import { sidebarOpenCore, sidebarOpenToggle } from "./manageSidebar";
 import Image from "next/image";
 import { sidebarData } from "./data";
-import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
-import { LogOut } from "lucide-react";
 import { SidebarToggleButton } from "./SidebarToggleButton";
 import { SidebarOverlay } from "./SidebarOverlay";
 import SidebarItemNav from "./SidebarItem";
+import LogoutButton from "./LogoutButton";
 import Link from "next/link";
-import { stroke_width } from "@/constants/styles";
 
 const SidebarCore = ({ open }: { open: boolean }) => {
   return (
@@ -19,7 +17,7 @@ const SidebarCore = ({ open }: { open: boolean }) => {
       <aside
         className={cn(
           "fixed top-0 right-0 h-full shadow-sm flex flex-col gap-4 bg-background duration-300 z-20",
-          sidebarOpenCore(open)
+          sidebarOpenCore(open),
         )}
       >
         {/* Toggle button */}
@@ -27,7 +25,7 @@ const SidebarCore = ({ open }: { open: boolean }) => {
           open={open}
           className={cn(
             "text-primary/60 hover:bg-primary/20 bg-primary/10 hover:text-primary/70 absolute top-3 w-10 h-10 flex items-center justify-center p-0 duration-300 transition-[right]",
-            sidebarOpenToggle(open)
+            sidebarOpenToggle(open),
           )}
         />
 
@@ -59,10 +57,7 @@ const SidebarCore = ({ open }: { open: boolean }) => {
 
         {/* Footer */}
         <div className="px-2 md:px-4 absolute bottom-4 right-0 w-full h-fit">
-          <Button className="w-full text-red-600 hover:bg-red-50 bg-red-100 hover:text-red-700 flex items-center gap-2">
-            <LogOut strokeWidth={stroke_width} />
-            {open && <span>تسجيل خروج</span>}
-          </Button>
+          <LogoutButton showLabel={open} />
         </div>
       </aside>
     </>

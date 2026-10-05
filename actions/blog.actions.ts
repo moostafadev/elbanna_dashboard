@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { isAdmin } from "@/lib/auth/guard";
 import type { ActionResult } from "@/types/action";
 import type {
   CreateBlogInput,
@@ -25,6 +26,8 @@ type BlogEditData = Prisma.BlogGetPayload<{
 export async function createBlog(
   input: CreateBlogInput,
 ): Promise<ActionResult<{ blogId: string }>> {
+  if (!(await isAdmin())) return { success: false, error: "Unauthorized" };
+
   const { title, desc, category, keywords, image, status, lang, content } =
     input;
 
@@ -176,6 +179,8 @@ export async function updateBlog(
   id: string,
   input: UpdateBlogInput,
 ): Promise<ActionResult<{ blogId: string }>> {
+  if (!(await isAdmin())) return { success: false, error: "Unauthorized" };
+
   const { content, ...blogFields } = input;
 
   if (hasEmptyField(input)) {
@@ -214,6 +219,8 @@ export async function updateBlog(
 export async function deleteBlog(
   id: string,
 ): Promise<ActionResult<{ blogId: string }>> {
+  if (!(await isAdmin())) return { success: false, error: "Unauthorized" };
+
   try {
     const existing = await prisma.blog.findUnique({
       where: { id },

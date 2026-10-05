@@ -1,7 +1,6 @@
 import { Cairo as FontCairo } from "next/font/google";
 import { cn } from "@/lib/utils";
 import "./globals.css";
-import MainLayout from "@/components/MainLayout";
 import { Toaster } from "@/components/ui/toaster";
 
 const fontCairo = FontCairo({
@@ -23,7 +22,7 @@ export default function RootLayout({
           "min-h-screen bg-primary/5 antialiased",
         )}
       >
-        <MainLayout>{children}</MainLayout>
+        {children}
         <Toaster />
       </body>
     </html>

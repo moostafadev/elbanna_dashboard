@@ -1,3 +1,4 @@
+import { AUTH_MESSAGES } from "@/components/Auth/constants";
 import type { BlogFormValues } from "./types";
 
 export const DEFAULT_FORM_VALUES: BlogFormValues = {
@@ -30,4 +31,5 @@ export const SERVER_ERRORS: Record<string, string> = {
   "Blog not found": "المدونة غير موجودة",
   "Missing required fields": "بعض الحقول المطلوبة ناقصة",
   "Content must not be empty": "المحتوى لا يمكن أن يكون فارغاً",
+  Unauthorized: AUTH_MESSAGES.sessionExpired,
 };

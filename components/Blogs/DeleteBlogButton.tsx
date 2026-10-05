@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { deleteBlog } from "@/actions/blog.actions";
+import { AUTH_MESSAGES } from "@/components/Auth/constants";
 import CustomDialog from "@/components/Custom/Dialog/CustomDialog";
 
 const DeleteBlogButton = ({ id }: { id: string }) => {
@@ -18,7 +19,13 @@ const DeleteBlogButton = ({ id }: { id: string }) => {
       const res = await deleteBlog(id);
 
       if (!res.success) {
-        toast({ variant: "destructive", title: "فشل حذف المدونة" });
+        toast({
+          variant: "destructive",
+          title:
+            res.error === "Unauthorized"
+              ? AUTH_MESSAGES.sessionExpired
+              : "فشل حذف المدونة",
+        });
         return;
       }
 
