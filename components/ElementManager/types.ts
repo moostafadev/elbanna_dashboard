@@ -17,16 +17,6 @@ export interface ElementState {
   href: string;
   openNewTab: boolean;
   loading: boolean;
-  listItems: string[];
 }
 
-export interface ParsedElement {
-  type: string;
-  color: string;
-  space: string;
-  displayText: string;
-  formattedText: string;
-  href: string;
-  openNewTab: boolean;
-  listItems: string[];
-}
+export type ParsedElement = Omit<ElementState, "loading">;

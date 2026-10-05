@@ -1,15 +1,14 @@
 "use server";
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export const getViews = async (slug: string): Promise<number> => {
   const view = await prisma.views.findUnique({
     where: { slug },
+    select: { count: true },
   });
 
-  return view?.count || 0;
+  return view?.count ?? 0;
 };
 
 export const createView = async (slug: string) => {

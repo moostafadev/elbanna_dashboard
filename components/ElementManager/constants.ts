@@ -1,3 +1,5 @@
+import type { ParsedElement } from "./types";
+
 export const ELEMENT_TYPES = [
   "p",
   "h1",
@@ -19,7 +21,7 @@ export const SIZE_MAP: Record<string, string> = {
   h4: "text-xl font-semibold",
   h5: "text-lg font-semibold",
   h6: "text-base font-semibold",
-  p: "text-base",
+  p: "text-base whitespace-pre-line",
   a: "text-base underline",
   ul: "text-base list-disc list-inside",
   ol: "text-base list-decimal list-inside",
@@ -49,7 +51,7 @@ export const FORMAT_BUTTONS = [
   { label: "توسيط", className: "text-center block w-full" },
 ];
 
-export const DEFAULT_VALUES = {
+export const DEFAULT_VALUES: ParsedElement = {
   type: "p",
   color: "text-black",
   space: "mt-2",
@@ -57,7 +59,24 @@ export const DEFAULT_VALUES = {
   formattedText: "",
   href: "",
   openNewTab: true,
-  listItems: [],
 };
 
 export const LIST_ELEMENT_TYPES = ["ul", "ol"];
+
+export const CLOUDINARY_UPLOAD_PRESET = "elbanna";
+
+export const MAX_IMAGE_SIZE_MB = 10;
+
+export const MESSAGES = {
+  onlyImages: "فقط الصور مسموح بها",
+  imageTooLarge: `حجم الصورة يجب ألا يتجاوز ${MAX_IMAGE_SIZE_MB} ميجابايت`,
+  uploadFailed: "حدث خطأ أثناء رفع الصورة",
+  imageUploaded: "تم رفع الصورة بنجاح",
+  invalidUrl:
+    "الرابط غير صالح، يجب أن يبدأ بـ https:// أو http:// أو mailto: أو tel: أو /",
+  elementAdded: "تمت إضافة العنصر بنجاح",
+  elementUpdated: "تم تحديث العنصر بنجاح",
+  elementDeleted: "تم حذف العنصر بنجاح",
+  emptyResult: 'لا توجد عناصر بعد، اضغط على "إضافة عنصر" للبدء',
+  noPreview: "لا توجد معاينة بعد",
+} as const;

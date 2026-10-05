@@ -1,26 +1,41 @@
 "use client";
 
 import React, { useState, useRef, useCallback, memo } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import Image from "next/image";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 
-import { ElementManagerProps, ElementState } from "./types";
+import { ElementManagerProps } from "./types";
 import {
   ELEMENT_TYPES,
   COLOR_OPTIONS,
   SPACING_OPTIONS,
   FORMAT_BUTTONS,
-  LIST_ELEMENT_TYPES,
+  MESSAGES,
 } from "./constants";
-import { useElementState, useTextFormatter, usePreviewHTML } from "./hooks";
-import { parseListText } from "./utils";
+import {
+  useElementState,
+  useImageHandler,
+  useTextFormatter,
+  usePreviewHTML,
+} from "./hooks";
+import {
+  isListType,
+  sanitizeUrl,
+  hasElementContent,
+  isElementValid,
+} from "./utils";
 import CustomDialog from "../Custom/Dialog/CustomDialog";
-import { Textarea } from "../ui/textarea";
-import { Plus } from "lucide-react";
-import InputImage from "../Custom/Inputs/InputImage";
-import CustomSelect from "../Custom/Select/CustomSelect";
 
 const getElementTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
@@ -40,7 +55,7 @@ const getElementTypeLabel = (type: string) => {
 };
 
 const getPlaceholderText = (type: string) => {
-  if (LIST_ELEMENT_TYPES.includes(type)) {
+  if (isListType(type)) {
     return type === "ul"
       ? "أدخل عناصر القائمة، كل عنصر في سطر منفصل:\n* العنصر الأول\n* العنصر الثاني\n* العنصر الثالث"
       : "أدخل عناصر القائمة، كل عنصر في سطر منفصل:\n1. العنصر الأول\n2. العنصر الثاني\n3. العنصر الثالث";
@@ -49,25 +64,22 @@ const getPlaceholderText = (type: string) => {
 };
 
 const ElementType = memo(
-  ({
-    updateState,
-    type,
-  }: {
-    updateState: (updates: Partial<ElementState>) => void;
-    type: string;
-  }) => {
+  ({ onChange, type }: { onChange: (type: string) => void; type: string }) => {
     return (
-      <CustomSelect
-        value={type}
-        onValueChange={(value) => updateState({ type: value })}
-        items={ELEMENT_TYPES.map((option) => ({
-          label: getElementTypeLabel(option),
-          value: option,
-        }))}
-        placeholder="نوع العنصر"
-      />
+      <Select value={type} onValueChange={onChange} dir="rtl">
+        <SelectTrigger>
+          <SelectValue placeholder="نوع العنصر" />
+        </SelectTrigger>
+        <SelectContent>
+          {ELEMENT_TYPES.map((elementType) => (
+            <SelectItem key={elementType} value={elementType}>
+              {getElementTypeLabel(elementType)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
-  }
+  },
 );
 
 ElementType.displayName = "ElementType";
@@ -86,76 +98,54 @@ const FormatButtons = memo(
         </Button>
       ))}
     </div>
-  )
+  ),
 );
 
 FormatButtons.displayName = "FormatButtons";
 
-const TeaxtareaOrInput = memo(
+const TextContentField = memo(
   ({
     type,
-    textAreaRef,
     dir,
-    displayText,
+    value,
+    textAreaRef,
     inputRef,
-    mode,
-    updateState,
-    formattedText,
+    onChange,
   }: {
     type: string;
-    textAreaRef: React.RefObject<HTMLTextAreaElement>;
     dir: "rtl" | "ltr";
-    displayText: string;
+    value: string;
+    textAreaRef: React.RefObject<HTMLTextAreaElement>;
     inputRef: React.RefObject<HTMLInputElement>;
-    mode: "edit" | "create";
-    updateState: (updates: Partial<ElementState>) => void;
-    formattedText: string;
+    onChange: (value: string) => void;
   }) => {
-    const handleTextChange = useCallback(
-      (value: string) => {
-        if (LIST_ELEMENT_TYPES.includes(type)) {
-          const items = parseListText(value);
-          updateState({
-            displayText: value,
-            formattedText: mode === "edit" ? value : formattedText,
-            listItems: items,
-          });
-        } else {
-          updateState({
-            displayText: value,
-            formattedText: mode === "edit" ? value : formattedText,
-          });
-        }
-      },
-      [updateState, mode, formattedText, type]
-    );
-    if (type === "p" || LIST_ELEMENT_TYPES.includes(type)) {
+    if (type === "p" || isListType(type)) {
       return (
         <Textarea
           ref={textAreaRef}
-          rows={LIST_ELEMENT_TYPES.includes(type) ? 6 : 4}
+          rows={isListType(type) ? 6 : 4}
           dir={dir}
           className="w-full border rounded p-2 text-sm"
           placeholder={getPlaceholderText(type)}
-          value={displayText}
-          onChange={(e) => handleTextChange(e.target.value)}
-        />
-      );
-    } else {
-      return (
-        <Input
-          ref={inputRef}
-          dir={dir}
-          placeholder="نص العنصر"
-          value={displayText}
-          onChange={(e) => handleTextChange(e.target.value)}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
         />
       );
     }
-  }
+
+    return (
+      <Input
+        ref={inputRef}
+        dir={dir}
+        placeholder="نص العنصر"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  },
 );
 
-TeaxtareaOrInput.displayName = "TeaxtareaOrInput";
+TextContentField.displayName = "TextContentField";
 
 const ElementManager: React.FC<ElementManagerProps> = ({
   setResult,
@@ -169,26 +159,35 @@ const ElementManager: React.FC<ElementManagerProps> = ({
   const [open, setOpen] = useState(mode === "edit");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { state, updateState, resetState } = useElementState(mode, html);
+  const { state, updateState, updateText, changeType, resetState } =
+    useElementState(mode, html);
+  const { handleImageUpload } = useImageHandler(updateState);
   const { formatSelection } = useTextFormatter(
     state,
     updateState,
-    mode,
     textAreaRef,
-    inputRef
+    inputRef,
   );
 
   const previewHtml = usePreviewHTML(state);
+  const isValid = isElementValid(state);
+  const hasPreview = hasElementContent(state);
+  const isInvalidUrl =
+    state.type === "a" && state.href !== "" && !sanitizeUrl(state.href);
 
   const handleSubmit = useCallback(() => {
+    if (!isValid) return;
+
     if (mode === "create" && setResult) {
       setResult((prev) => [...prev, previewHtml]);
       resetState();
       setOpen(false);
+      toast({ title: MESSAGES.elementAdded });
     } else if (mode === "edit" && onUpdate && index !== undefined) {
       onUpdate(index, previewHtml);
+      toast({ title: MESSAGES.elementUpdated });
     }
-  }, [mode, setResult, onUpdate, index, previewHtml, resetState]);
+  }, [isValid, mode, setResult, onUpdate, index, previewHtml, resetState]);
 
   const handleCancel = useCallback(() => {
     if (mode === "create") {
@@ -198,110 +197,142 @@ const ElementManager: React.FC<ElementManagerProps> = ({
     }
   }, [mode, onCancel]);
 
-  const dialogContent = (
-    <>
-      <div className="flex flex-col gap-4">
-        <ElementType type={state.type} updateState={updateState} />
+  const handleFileUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
 
-        <div className="border rounded p-3 bg-gray-50">
-          <h4 className="text-sm font-medium mb-2">معاينة:</h4>
+      if (file) {
+        await handleImageUpload(file);
+      }
+    },
+    [handleImageUpload],
+  );
+
+  const dialogContent = (
+    <div className="flex flex-col gap-4">
+      <ElementType type={state.type} onChange={changeType} />
+
+      <div className="border rounded p-3 bg-gray-50">
+        <h4 className="text-sm font-medium mb-2">معاينة:</h4>
+        {hasPreview ? (
           <div
             className="min-h-[40px] bg-white p-2 rounded border"
             dangerouslySetInnerHTML={{ __html: previewHtml }}
             dir={dir}
           />
-        </div>
-
-        {state.type !== "img" && (
-          <>
-            <TeaxtareaOrInput
-              type={state.type}
-              textAreaRef={textAreaRef}
-              dir={dir}
-              displayText={state.displayText}
-              inputRef={inputRef}
-              mode={mode}
-              formattedText={state.formattedText}
-              updateState={updateState}
-            />
-
-            {!LIST_ELEMENT_TYPES.includes(state.type) && (
-              <FormatButtons formatSelection={formatSelection} />
-            )}
-          </>
-        )}
-
-        {state.type === "img" && (
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              اختر صورة من جهازك
-            </label>
-            <InputImage loading={state.loading} updateState={updateState} />
-            {state.loading && (
-              <p className="text-sm text-blue-500">جاري الرفع...</p>
-            )}
-            {state.href && (
-              <Image
-                width={500}
-                height={500}
-                src={state.href}
-                alt="معاينة الصورة"
-                className="max-w-xs mt-2 rounded border"
-              />
-            )}
-            <Input
-              placeholder="النص البديل (alt)"
-              value={state.displayText}
-              onChange={(e) => updateState({ displayText: e.target.value })}
-            />
+        ) : (
+          <div className="min-h-[40px] bg-white p-2 rounded border text-sm text-muted-foreground">
+            {MESSAGES.noPreview}
           </div>
         )}
-
-        {state.type === "a" && (
-          <>
-            <Input
-              placeholder="رابط (href)"
-              value={state.href}
-              onChange={(e) => updateState({ href: e.target.value })}
-            />
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="new-tab"
-                checked={state.openNewTab}
-                onCheckedChange={(checked) =>
-                  updateState({ openNewTab: !!checked })
-                }
-              />
-              <label htmlFor="new-tab" className="text-sm">
-                فتح في صفحة جديدة
-              </label>
-            </div>
-          </>
-        )}
-
-        {state.type !== "img" && (
-          <CustomSelect
-            value={state.color}
-            onValueChange={(value) => updateState({ color: value })}
-            items={COLOR_OPTIONS.map((option) => ({
-              label: option.label,
-              value: option.value,
-            }))}
-            placeholder="لون النص"
-          />
-        )}
-
-        <CustomSelect
-          value={state.space}
-          onValueChange={(value) => updateState({ space: value })}
-          items={SPACING_OPTIONS.map((option) => ({
-            label: option.label,
-            value: option.value,
-          }))}
-          placeholder="الهامش العلوي"
-        />
       </div>
-    </>
+
+      {state.type !== "img" && (
+        <>
+          <TextContentField
+            type={state.type}
+            dir={dir}
+            value={state.displayText}
+            textAreaRef={textAreaRef}
+            inputRef={inputRef}
+            onChange={updateText}
+          />
+
+          {!isListType(state.type) && (
+            <FormatButtons formatSelection={formatSelection} />
+          )}
+        </>
+      )}
+
+      {state.type === "img" && (
+        <div className="space-y-2">
+          <label
+            htmlFor="element-image"
+            className="text-sm text-muted-foreground"
+          >
+            اختر صورة من جهازك
+          </label>
+          <Input
+            id="element-image"
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            disabled={state.loading}
+          />
+          {state.loading && (
+            <p className="text-sm text-blue-500">جاري الرفع...</p>
+          )}
+          <Input
+            placeholder="النص البديل (alt)"
+            value={state.displayText}
+            onChange={(e) => updateText(e.target.value)}
+          />
+        </div>
+      )}
+
+      {state.type === "a" && (
+        <>
+          <Input
+            dir="ltr"
+            placeholder="رابط (href)"
+            value={state.href}
+            onChange={(e) => updateState({ href: e.target.value })}
+          />
+          {isInvalidUrl && (
+            <p className="text-sm text-red-600">{MESSAGES.invalidUrl}</p>
+          )}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="new-tab"
+              checked={state.openNewTab}
+              onCheckedChange={(checked) =>
+                updateState({ openNewTab: !!checked })
+              }
+            />
+            <label htmlFor="new-tab" className="text-sm">
+              فتح في صفحة جديدة
+            </label>
+          </div>
+        </>
+      )}
+
+      {state.type !== "img" && (
+        <Select
+          value={state.color}
+          onValueChange={(value) => updateState({ color: value })}
+          dir="rtl"
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="لون النص" />
+          </SelectTrigger>
+          <SelectContent>
+            {COLOR_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      <Select
+        value={state.space}
+        onValueChange={(value) => updateState({ space: value })}
+        dir="rtl"
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="الهامش العلوي" />
+        </SelectTrigger>
+        <SelectContent>
+          {SPACING_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 
   if (mode === "edit") {
@@ -315,7 +346,11 @@ const ElementManager: React.FC<ElementManagerProps> = ({
             <Button onClick={handleCancel} variant="outline">
               إلغاء
             </Button>
-            <Button onClick={handleSubmit} className="text-white">
+            <Button
+              onClick={handleSubmit}
+              className="text-white"
+              disabled={!isValid || state.loading}
+            >
               تحديث
             </Button>
           </>
@@ -332,11 +367,7 @@ const ElementManager: React.FC<ElementManagerProps> = ({
       onOpenChange={setOpen}
       title="إنشاء عنصر"
       trigger={
-        <Button
-          variant="outline"
-          onClick={() => setOpen(true)}
-          className="flex"
-        >
+        <Button variant="outline">
           <Plus /> إضافة عنصر
         </Button>
       }
@@ -345,7 +376,11 @@ const ElementManager: React.FC<ElementManagerProps> = ({
           <Button onClick={handleCancel} variant="outline">
             إلغاء
           </Button>
-          <Button onClick={handleSubmit} className="text-white">
+          <Button
+            onClick={handleSubmit}
+            className="text-white"
+            disabled={!isValid || state.loading}
+          >
             إضافة
           </Button>
         </>

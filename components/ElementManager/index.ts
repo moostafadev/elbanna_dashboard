@@ -9,14 +9,23 @@ export {
   SPACING_OPTIONS,
   FORMAT_BUTTONS,
   DEFAULT_VALUES,
+  LIST_ELEMENT_TYPES,
+  MESSAGES,
 } from "./constants";
 
 export {
   parseHTML,
   generatePreviewHTML,
   uploadImage,
-  getFormattedPosition,
-  applyFormatting,
+  validateImageFile,
+  wrapSelection,
+  syncFormattedText,
+  parseListText,
+  escapeHTML,
+  sanitizeUrl,
+  isListType,
+  hasElementContent,
+  isElementValid,
 } from "./utils";
 
 export {

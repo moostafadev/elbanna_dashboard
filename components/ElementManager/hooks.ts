@@ -1,92 +1,105 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ElementState } from "./types";
-import { DEFAULT_VALUES, LIST_ELEMENT_TYPES } from "./constants";
+import { DEFAULT_VALUES, MESSAGES } from "./constants";
 import {
   parseHTML,
   generatePreviewHTML,
   uploadImage,
-  getFormattedPosition,
-  applyFormatting,
-  parseListText,
+  validateImageFile,
+  wrapSelection,
+  syncFormattedText,
+  isListType,
 } from "./utils";
+import { toast } from "@/hooks/use-toast";
+
+const createInitialState = (
+  mode: "create" | "edit",
+  html?: string,
+): ElementState => ({
+  ...(mode === "edit" && html ? parseHTML(html) : DEFAULT_VALUES),
+  loading: false,
+});
 
 export const useElementState = (mode: "create" | "edit", html?: string) => {
-  const [state, setState] = useState<ElementState>({
-    ...DEFAULT_VALUES,
-    loading: false,
-    listItems: [],
-  });
-
-  useEffect(() => {
-    if (mode === "edit" && html) {
-      const parsed = parseHTML(html);
-      setState((prev) => ({
-        ...prev,
-        type: parsed.type,
-        color: parsed.color,
-        space: parsed.space,
-        displayText: parsed.displayText,
-        formattedText: parsed.formattedText,
-        href: parsed.href,
-        openNewTab: parsed.openNewTab,
-        listItems: parsed.listItems,
-      }));
-    }
-  }, [mode, html]);
-
-  useEffect(() => {
-    if (mode === "create") {
-      if (LIST_ELEMENT_TYPES.includes(state.type)) {
-        const items = parseListText(state.displayText);
-        setState((prev) => ({
-          ...prev,
-          listItems: items,
-          formattedText: prev.displayText,
-        }));
-      } else {
-        setState((prev) => ({
-          ...prev,
-          formattedText: prev.displayText,
-        }));
-      }
-    }
-  }, [state.displayText, state.type, mode]);
+  const [state, setState] = useState<ElementState>(() =>
+    createInitialState(mode, html),
+  );
 
   const updateState = useCallback((updates: Partial<ElementState>) => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  const resetState = useCallback(() => {
-    setState({
-      ...DEFAULT_VALUES,
-      loading: false,
-      listItems: [],
+  const updateText = useCallback((value: string) => {
+    setState((prev) =>
+      prev.displayText === value
+        ? prev
+        : {
+            ...prev,
+            displayText: value,
+            formattedText: syncFormattedText(
+              prev.formattedText,
+              prev.displayText,
+              value,
+            ),
+          },
+    );
+  }, []);
+
+  const changeType = useCallback((type: string) => {
+    setState((prev) => {
+      const isMultiline = type === "p" || isListType(type);
+      const displayText = isMultiline
+        ? prev.displayText
+        : prev.displayText.replace(/\s*\n+\s*/g, " ");
+
+      return {
+        ...prev,
+        type,
+        displayText,
+        formattedText:
+          displayText === prev.displayText
+            ? prev.formattedText
+            : syncFormattedText(
+                prev.formattedText,
+                prev.displayText,
+                displayText,
+              ),
+      };
     });
   }, []);
 
-  return {
-    state,
-    updateState,
-    resetState,
-  };
+  const resetState = useCallback(() => {
+    setState(createInitialState("create"));
+  }, []);
+
+  return { state, updateState, updateText, changeType, resetState };
 };
 
 export const useImageHandler = (
-  updateState: (updates: Partial<ElementState>) => void
+  updateState: (updates: Partial<ElementState>) => void,
 ) => {
   const handleImageUpload = useCallback(
     async (file: File) => {
+      const validationError = validateImageFile(file);
+
+      if (validationError) {
+        toast({ variant: "destructive", title: validationError });
+        return;
+      }
+
       try {
         updateState({ loading: true });
         const url = await uploadImage(file);
-        updateState({ href: url, loading: false });
+        updateState({ href: url });
+        toast({ title: MESSAGES.imageUploaded });
       } catch (error) {
         console.error("Upload error:", error);
-        alert("حدث خطأ أثناء رفع الصورة");
+        toast({ variant: "destructive", title: MESSAGES.uploadFailed });
+      } finally {
         updateState({ loading: false });
       }
     },
-    [updateState]
+    [updateState],
   );
 
   return { handleImageUpload };
@@ -95,75 +108,57 @@ export const useImageHandler = (
 export const useTextFormatter = (
   state: ElementState,
   updateState: (updates: Partial<ElementState>) => void,
-  mode: "create" | "edit",
   textAreaRef: React.RefObject<HTMLTextAreaElement>,
-  inputRef: React.RefObject<HTMLInputElement>
+  inputRef: React.RefObject<HTMLInputElement>,
 ) => {
+  const { type, displayText, formattedText } = state;
+
   const formatSelection = useCallback(
     (className: string) => {
-      if (LIST_ELEMENT_TYPES.includes(state.type)) {
-        return;
-      }
+      if (isListType(type)) return;
 
-      const el = state.type === "p" ? textAreaRef.current : inputRef.current;
+      const el = type === "p" ? textAreaRef.current : inputRef.current;
       if (!el) return;
 
       const start = el.selectionStart ?? 0;
       const end = el.selectionEnd ?? 0;
-      const selected = state.displayText.slice(start, end);
 
-      if (!selected) return;
-
-      const before = state.displayText.slice(0, start);
-      const after = state.displayText.slice(end);
-      const htmlWrapper = applyFormatting(className, selected);
-
-      const newDisplayText = before + selected + after;
-
-      let newFormattedText: string;
-      if (mode === "create") {
-        newFormattedText =
-          state.formattedText.slice(0, start) +
-          `<span class="${className}">${selected}</span>` +
-          state.formattedText.slice(end);
-      } else {
-        const beforeFormatted = state.formattedText.substring(
-          0,
-          getFormattedPosition(start, state.formattedText, state.displayText)
-        );
-        const afterFormatted = state.formattedText.substring(
-          getFormattedPosition(end, state.formattedText, state.displayText)
-        );
-        newFormattedText = beforeFormatted + htmlWrapper + afterFormatted;
-      }
+      if (start === end) return;
 
       updateState({
-        displayText: newDisplayText,
-        formattedText: newFormattedText,
+        formattedText: wrapSelection(
+          formattedText,
+          displayText,
+          start,
+          end,
+          className,
+        ),
       });
 
-      setTimeout(() => {
-        el.focus();
-        el.selectionStart = el.selectionEnd = (before + selected).length;
-      }, 0);
+      el.focus();
+      el.setSelectionRange(start, end);
     },
-    [state, updateState, mode, textAreaRef, inputRef]
+    [type, displayText, formattedText, updateState, textAreaRef, inputRef],
   );
 
   return { formatSelection };
 };
 
 export const usePreviewHTML = (state: ElementState) => {
-  return useMemo(() => {
-    return generatePreviewHTML(
-      state.type,
-      state.color,
-      state.space,
-      state.displayText,
-      state.formattedText,
-      state.href,
-      state.openNewTab,
-      state.listItems
-    );
-  }, [state]);
+  const { type, color, space, displayText, formattedText, href, openNewTab } =
+    state;
+
+  return useMemo(
+    () =>
+      generatePreviewHTML({
+        type,
+        color,
+        space,
+        displayText,
+        formattedText,
+        href,
+        openNewTab,
+      }),
+    [type, color, space, displayText, formattedText, href, openNewTab],
+  );
 };
