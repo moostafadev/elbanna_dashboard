@@ -25,24 +25,29 @@ model Views {
 }
 
 model Blog {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  title       String     @unique
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  title       String      @unique
   desc        String
-  contentId   String     @unique @db.ObjectId
+  contentId   String      @unique @db.ObjectId
+  htmlContent HtmlContent @relation(fields: [contentId], references: [id])
   category    String
   keywords    String[]
   image       String
-  comments    Comment[]  @relation("BlogComments")
-  likes       Like[]     @relation("BlogLikes")
-  status      Status     @default(show)
+  comments    Comment[]   @relation("BlogComments")
+  likes       Like[]      @relation("BlogLikes")
+  status      Status      @default(show)
   lang        LANG
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status, createdAt])
+  @@index([lang])
 }
 
 model HtmlContent {
   id          String     @id @default(auto()) @map("_id") @db.ObjectId
   content     String[]
+  blog        Blog?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }

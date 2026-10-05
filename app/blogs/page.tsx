@@ -14,20 +14,20 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   PenLine,
-  Trash2,
   Eye,
   Plus,
   FileText,
   Globe,
   Archive,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
-import Image from "next/image";
+import DeleteBlogButton from "@/components/Blogs/DeleteBlogButton";
+import BlogStatusBadge from "@/components/Blogs/BlogStatusBadge";
+import BlogImage from "@/components/Blogs/BlogImage";
+import { LANG_LABELS } from "@/components/Blogs/constants";
 
-const LANG_LABEL: Record<string, string> = {
-  ar: "العربية",
-  en: "الإنجليزية",
-  fr: "الفرنسية",
-};
+export const dynamic = "force-dynamic";
 
 const Page = async () => {
   const res = await getBlogs({ limit: 50 });
@@ -47,14 +47,24 @@ const Page = async () => {
               عرض وإدارة جميع مقالات المدونة
             </p>
           </div>
-          <Link href="/blogs/create">
-            <Button className="flex items-center gap-2 text-white">
+          <Button asChild className="flex items-center gap-2 text-white">
+            <Link href="/blogs/create">
               <Plus size={16} />
               إنشاء مدونة جديدة
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </section>
+
+      {/* Error State */}
+      {!res.success && (
+        <section className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="text-sm">
+            حدث خطأ أثناء تحميل المدونات، حاول تحديث الصفحة.
+          </p>
+        </section>
+      )}
 
       {/* Stats Row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -87,8 +97,8 @@ const Page = async () => {
             color: "text-purple-600",
             bg: "bg-purple-50",
           },
-        ].map((stat, i) => (
-          <Card key={i} className="hover:shadow-md transition-shadow">
+        ].map((stat) => (
+          <Card key={stat.label} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4 flex items-center gap-3">
               <div className={`p-2 rounded-lg ${stat.bg}`}>
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
@@ -115,12 +125,12 @@ const Page = async () => {
             <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
               <FileText className="h-12 w-12 opacity-30" />
               <p className="text-sm">لا توجد مدونات بعد</p>
-              <Link href="/blogs/create">
-                <Button variant="outline" size="sm" className="gap-2">
+              <Button asChild variant="outline" size="sm" className="gap-2">
+                <Link href="/blogs/create">
                   <Plus size={14} />
                   أنشئ أول مدونة
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -168,28 +178,22 @@ const Page = async () => {
 
                       {/* Image */}
                       <TableCell>
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                          {blog.image ? (
-                            <Image
-                              src={blog.image}
-                              alt={blog.title}
-                              width={48}
-                              height={48}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <FileText className="h-5 w-5 text-gray-300" />
-                            </div>
-                          )}
-                        </div>
+                        <BlogImage
+                          src={blog.image}
+                          alt={blog.title}
+                          variant="thumb"
+                          className="rounded-lg"
+                        />
                       </TableCell>
 
                       {/* Title + desc */}
                       <TableCell className="max-w-[200px]">
-                        <p className="font-medium text-gray-900 truncate text-sm">
+                        <Link
+                          href={`/blogs/${blog.id}`}
+                          className="block font-medium text-gray-900 truncate text-sm hover:text-primary"
+                        >
                           {blog.title}
-                        </p>
+                        </Link>
                         <p className="text-xs text-gray-400 truncate mt-0.5">
                           {blog.desc}
                         </p>
@@ -205,20 +209,13 @@ const Page = async () => {
                       {/* Lang */}
                       <TableCell className="hidden lg:table-cell">
                         <span className="text-sm text-gray-600">
-                          {LANG_LABEL[blog.lang] ?? blog.lang}
+                          {LANG_LABELS[blog.lang]}
                         </span>
                       </TableCell>
 
                       {/* Status */}
                       <TableCell>
-                        <Badge
-                          variant={
-                            blog.status === "show" ? "green" : "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {blog.status === "show" ? "مرئي" : "مؤرشف"}
-                        </Badge>
+                        <BlogStatusBadge status={blog.status} />
                       </TableCell>
 
                       {/* Comments count */}
@@ -234,24 +231,35 @@ const Page = async () => {
                       {/* Actions */}
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Link href={`/dashboard/blogs/edit/${blog.id}`}>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                              title="تعديل"
-                            >
-                              <PenLine size={14} />
-                            </Button>
-                          </Link>
                           <Button
+                            asChild
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                            title="حذف"
+                            className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                           >
-                            <Trash2 size={14} />
+                            <Link
+                              href={`/blogs/${blog.id}`}
+                              title="عرض واختبار"
+                              aria-label="عرض واختبار"
+                            >
+                              <ExternalLink size={14} />
+                            </Link>
                           </Button>
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                          >
+                            <Link
+                              href={`/blogs/edit/${blog.id}`}
+                              title="تعديل"
+                              aria-label="تعديل"
+                            >
+                              <PenLine size={14} />
+                            </Link>
+                          </Button>
+                          <DeleteBlogButton id={blog.id} />
                         </div>
                       </TableCell>
                     </TableRow>

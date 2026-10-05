@@ -1,13 +1,11 @@
-import UiCreator from "@/components/UiCreator";
 import React from "react";
+import BlogForm from "@/components/Blogs/BlogForm/BlogForm";
 
 const Page = () => {
   return (
-    <>
-      <section>
-        <UiCreator />
-      </section>
-    </>
+    <section>
+      <BlogForm mode="create" />
+    </section>
   );
 };
 

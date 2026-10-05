@@ -15,16 +15,13 @@ const InputImage: React.FC<InputImageProps> = ({ updateState, loading }) => {
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file) return;
+      e.target.value = "";
 
-      if (!file.type.startsWith("image/")) {
-        alert("فقط الصور مسموح بها");
-        return;
+      if (file) {
+        await handleImageUpload(file);
       }
-
-      await handleImageUpload(file);
     },
-    [handleImageUpload]
+    [handleImageUpload],
   );
 
   return (

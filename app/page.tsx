@@ -1,15 +1,17 @@
-"use client";
-
 import React from "react";
+import Link from "next/link";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+  AlertCircle,
+  Calendar,
+  Eye,
+  FileText,
+  Heart,
+  MessageSquare,
+  Plus,
+} from "lucide-react";
+import { getDashboardStats } from "@/actions/dashboard.actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -17,314 +19,215 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Eye,
-  FileText,
-  HelpCircle,
-  TrendingUp,
-  Calendar,
-  User,
-  ArrowUpRight,
-  MoreHorizontal,
-} from "lucide-react";
-import Image from "next/image";
+import StatCard from "@/components/Dashboard/StatCard";
+import WeeklyBarChart from "@/components/Dashboard/WeeklyBarChart";
+import { EMPTY_STATS } from "@/components/Dashboard/constants";
+import BlogImage from "@/components/Blogs/BlogImage";
+import BlogStatusBadge from "@/components/Blogs/BlogStatusBadge";
 
-type BlogStatus = "منشور" | "مسودة" | "مؤرشف";
-type LatestBlog = {
-  id: number;
-  title: string;
-  excerpt: string;
-  author: string;
-  date: string;
-  views: number;
-  category: string;
-  image: string;
-  status: BlogStatus;
-};
+export const dynamic = "force-dynamic";
 
-const Page = () => {
-  // Static data for counters
+const Page = async () => {
+  const res = await getDashboardStats();
+  const stats = res.success ? res.data : EMPTY_STATS;
+
   const counters = [
     {
       title: "إجمالي المقالات",
-      value: "156",
-      change: "+12%",
+      value: stats.totalBlogs,
+      hint: `مرئي: ${stats.visibleBlogs} · مؤرشف: ${stats.archivedBlogs}`,
       icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
-      title: "الأسئلة الشائعة",
-      value: "89",
-      change: "+8%",
-      icon: HelpCircle,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
       title: "إجمالي المشاهدات",
-      value: "24,567",
-      change: "+23%",
+      value: stats.totalViews,
+      hint: "مجموع مشاهدات كل الصفحات",
       icon: Eye,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
     {
-      title: "معدل النمو",
-      value: "18.5%",
-      change: "+5%",
-      icon: TrendingUp,
+      title: "إجمالي التعليقات",
+      value: stats.totalComments,
+      hint: `آخر 4 أسابيع: ${stats.monthComments}`,
+      icon: MessageSquare,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+    },
+    {
+      title: "إجمالي الإعجابات",
+      value: stats.totalLikes,
+      hint: "على جميع المقالات",
+      icon: Heart,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
     },
   ];
 
-  // Analytics data for charts
-  const blogAnalytics = [
-    { name: "الأسبوع 1", المقالات: 12 },
-    { name: "الأسبوع 2", المقالات: 19 },
-    { name: "الأسبوع 3", المقالات: 8 },
-    { name: "الأسبوع 4", المقالات: 15 },
-  ];
-
-  const faqAnalytics = [
-    { name: "الأسبوع 1", الأسئلة: 8 },
-    { name: "الأسبوع 2", الأسئلة: 12 },
-    { name: "الأسبوع 3", الأسئلة: 6 },
-    { name: "الأسبوع 4", الأسئلة: 10 },
-  ];
-
-  // Latest blogs data
-  const latestBlogs: LatestBlog[] = [
-    {
-      id: 1,
-      title: "قوانين العمل الجديدة في مصر 2024",
-      excerpt:
-        "شرح مفصل للتعديلات الأخيرة على قانون العمل المصري وتأثيرها على أصحاب العمل والموظفين",
-      author: "أحمد البنا",
-      date: "2024-01-15",
-      views: 1250,
-      category: "قانون العمل",
-      image:
-        "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=200&fit=crop",
-      status: "منشور",
-    },
-    {
-      id: 2,
-      title: "حقوق المستهلك في التجارة الإلكترونية",
-      excerpt:
-        "دليل شامل حول حقوق المستهلك عند التسوق الإلكتروني والحماية القانونية المتاحة",
-      author: "سارة محمد",
-      date: "2024-01-12",
-      views: 980,
-      category: "حماية المستهلك",
-      image:
-        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=200&fit=crop",
-      status: "منشور",
-    },
-    {
-      id: 3,
-      title: "إجراءات تأسيس الشركات في مصر",
-      excerpt:
-        "خطوات مفصلة لتأسيس الأنواع المختلفة من الشركات والمستندات المطلوبة",
-      author: "محمد البنا",
-      date: "2024-01-10",
-      views: 1560,
-      category: "قانون الشركات",
-      image:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=200&fit=crop",
-      status: "مسودة",
-    },
-  ];
-
-  type StatusBadgeProps = {
-    status: "منشور" | "مسودة" | "مؤرشف";
-  };
-
-  const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-    return (
-      <Badge className={`text-xs`} variant={"green"}>
-        {status}
-      </Badge>
-    );
-  };
-
   return (
     <>
       {/* Header */}
-      <section className="bg-white rounded-xl shadow-sm border p-4 md:p-6">
-        <div className="flex items-center justify-between flex-col md:flex-row gap-4">
+      <section className="rounded-xl border bg-white p-4 shadow-sm md:p-6">
+        <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="mb-2 text-xl font-bold text-gray-900 md:text-3xl">
               لوحة التحكم
             </h1>
-            <p className="text-gray-600 text-sm md:text-base">
-              مكتب البنا للمحاماة - إدارة المحتوى والأسئلة الشائعة
+            <p className="text-sm text-gray-600 md:text-base">
+              مكتب البنا للمحاماة - إدارة المحتوى
             </p>
           </div>
           <div className="flex items-center self-end">
             <Badge className="px-3 py-1 text-xs md:text-sm" variant={"blue"}>
-              آخر تحديث: اليوم
+              آخر تحديث:{" "}
+              {new Date().toLocaleString("ar-EG", {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: "Africa/Cairo",
+              })}
             </Badge>
           </div>
         </div>
       </section>
 
-      {/* First Section - Counters */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        {counters.map((counter, index) => (
-          <Card
-            key={index}
-            className="relative overflow-hidden hover:shadow-lg transition-shadow duration-300"
-          >
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">
-                    {counter.title}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {counter.value}
-                  </p>
-                  <div className="flex items-center mt-2">
-                    <ArrowUpRight className="h-4 w-4 text-green-500 ml-1" />
-                    <span className="text-sm text-green-600 font-medium">
-                      {counter.change}
-                    </span>
-                  </div>
-                </div>
-                <div className={`p-3 rounded-full ${counter.bgColor}`}>
-                  <counter.icon className={`h-6 w-6 ${counter.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Error State */}
+      {!res.success && (
+        <section className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="text-sm">
+            تعذر تحميل بيانات لوحة التحكم، حاول تحديث الصفحة.
+          </p>
+        </section>
+      )}
+
+      {/* Counters */}
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+        {counters.map((counter) => (
+          <StatCard key={counter.title} {...counter} />
         ))}
       </section>
 
-      {/* Second Section - Analytics */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="hover:shadow-lg transition-shadow duration-300">
+      {/* Analytics */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="transition-shadow duration-300 hover:shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center text-base md:text-2xl">
-              <FileText className="h-5 w-5 ml-2 text-blue-600" />
-              تحليلات المقالات
+              <FileText className="ml-2 h-5 w-5 text-blue-600" />
+              المقالات المنشورة
             </CardTitle>
             <CardDescription>
-              عدد المقالات المنشورة والمشاهدات - الشهر الماضي
+              عدد المقالات المضافة أسبوعيًا - آخر 4 أسابيع
             </CardDescription>
           </CardHeader>
-          <CardContent dir="ltr">
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart
-                data={blogAnalytics}
-                margin={{ top: 0, right: -10, bottom: 0, left: -30 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="المقالات" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent>
+            <WeeklyBarChart
+              data={stats.weeklyBlogs}
+              label="المقالات"
+              color="#3B82F6"
+            />
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow duration-300">
+        <Card className="transition-shadow duration-300 hover:shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center text-base md:text-2xl">
-              <HelpCircle className="h-5 w-5 ml-2 text-green-600" />
-              تحليلات الأسئلة الشائعة
+              <MessageSquare className="ml-2 h-5 w-5 text-green-600" />
+              التعليقات
             </CardTitle>
             <CardDescription>
-              الأسئلة الجديدة والإجابات المضافة - الشهر الماضي
+              عدد التعليقات الجديدة أسبوعيًا - آخر 4 أسابيع
             </CardDescription>
           </CardHeader>
-          <CardContent dir="ltr">
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart
-                data={faqAnalytics}
-                margin={{ top: 0, right: -10, bottom: 0, left: -30 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="الأسئلة" fill="#10B981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent>
+            <WeeklyBarChart
+              data={stats.weeklyComments}
+              label="التعليقات"
+              color="#10B981"
+            />
           </CardContent>
         </Card>
       </section>
 
-      {/* Third Section - Latest Blogs */}
+      {/* Latest Blogs */}
       <section>
-        <Card className="hover:shadow-lg transition-shadow duration-300">
+        <Card className="transition-shadow duration-300 hover:shadow-lg">
           <CardHeader>
-            <CardTitle className="flex md:items-center flex-col md:flex-row md:justify-between gap-2 text-base md:text-2xl">
+            <CardTitle className="flex flex-col gap-2 text-base md:flex-row md:items-center md:justify-between md:text-2xl">
               <div className="flex items-center">
-                <FileText className="h-5 w-5 ml-2 text-primary" />
+                <FileText className="ml-2 h-5 w-5 text-primary" />
                 أحدث المقالات
               </div>
               <Badge variant={"secondary"} className="self-end">
-                {latestBlogs.length} مقالات
+                {stats.latestBlogs.length} مقالات
               </Badge>
             </CardTitle>
-            <CardDescription>آخر المقالات المضافة والمحدثة</CardDescription>
+            <CardDescription>آخر المقالات المضافة</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {latestBlogs.map((blog) => (
-                <div
-                  key={blog.id}
-                  className="bg-white border rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-300"
-                >
-                  <div className="relative">
-                    <Image
-                      src={blog.image}
-                      alt={blog.title}
-                      width={400}
-                      height={400}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute top-3 right-3">
-                      <StatusBadge status={blog.status} />
-                    </div>
-                  </div>
-                  <div className="p-3 md:p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge className="text-xs" variant={"blue"}>
-                        {blog.category}
-                      </Badge>
-                      <MoreHorizontal className="h-4 w-4 text-gray-400 cursor-pointer" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                      {blog.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {blog.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center">
-                        <User className="h-3 w-3 ml-1" />
-                        {blog.author}
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 ml-1" />
-                        {blog.date}
+            {stats.latestBlogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-gray-400">
+                <FileText className="h-12 w-12 opacity-30" />
+                <p className="text-sm">لا توجد مقالات بعد</p>
+                <Button asChild variant="outline" size="sm" className="gap-2">
+                  <Link href="/blogs/create">
+                    <Plus size={14} />
+                    أنشئ أول مدونة
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {stats.latestBlogs.map((blog) => (
+                  <Link
+                    key={blog.id}
+                    href={`/blogs/${blog.id}`}
+                    className="overflow-hidden rounded-lg border bg-white transition-shadow duration-300 hover:shadow-md"
+                  >
+                    <div className="relative">
+                      <BlogImage
+                        src={blog.image}
+                        alt={blog.title}
+                        variant="card"
+                      />
+                      <div className="absolute right-3 top-3">
+                        <BlogStatusBadge status={blog.status} />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Eye className="h-4 w-4 ml-1" />
-                        {blog.views.toLocaleString()} مشاهدة
+                    <div className="p-3 md:p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <Badge className="text-xs" variant={"blue"}>
+                          {blog.category}
+                        </Badge>
+                      </div>
+                      <h3 className="mb-2 line-clamp-2 font-semibold text-gray-900">
+                        {blog.title}
+                      </h3>
+                      <p className="mb-3 line-clamp-2 text-sm text-gray-600">
+                        {blog.desc}
+                      </p>
+                      <div className="flex items-center justify-between border-t pt-3 text-xs text-gray-500">
+                        <div className="flex items-center">
+                          <Calendar className="ml-1 h-3 w-3" />
+                          {blog.createdAt.toLocaleDateString("ar-EG")}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            {blog.commentsCount}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="h-3 w-3" />
+                            {blog.likesCount}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>

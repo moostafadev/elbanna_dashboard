@@ -13,7 +13,12 @@ export const sidebarOpenToggle = (open: boolean) => {
 };
 
 export const sidebarSelectItem = (pathname: string, href: string) => {
-  return pathname === href
+  const isActive =
+    href === "/"
+      ? pathname === "/"
+      : pathname === href || pathname.startsWith(`${href}/`);
+
+  return isActive
     ? "bg-primary text-white shadow-md"
     : "bg-white text-primary shadow-sm";
 };

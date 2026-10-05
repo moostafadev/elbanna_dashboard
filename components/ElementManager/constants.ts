@@ -63,7 +63,8 @@ export const DEFAULT_VALUES: ParsedElement = {
 
 export const LIST_ELEMENT_TYPES = ["ul", "ol"];
 
-export const CLOUDINARY_UPLOAD_PRESET = "elbanna";
+export const CLOUDINARY_UPLOAD_PRESET =
+  process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? "elbanna";
 
 export const MAX_IMAGE_SIZE_MB = 10;
 

@@ -1,37 +1,24 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { LANG, Prisma, Status } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import type { ActionResult } from "@/types/action";
+import type {
+  CreateBlogInput,
+  GetBlogsFilters,
+  UpdateBlogInput,
+} from "@/types/blog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+type BlogWithCount = Prisma.BlogGetPayload<{
+  include: { _count: { select: { comments: true; likes: true } } };
+}>;
 
-type CreateBlogInput = {
-  title: string;
-  desc: string;
-  category: string;
-  keywords: string[];
-  image: string;
-  status?: Status;
-  lang: LANG | "";
-  content: string[];
-};
-
-type UpdateBlogInput = Partial<Omit<CreateBlogInput, "content">> & {
-  content?: string[];
-};
-
-type GetBlogsFilters = {
-  lang?: LANG;
-  category?: string;
-  status?: Status;
-  page?: number;
-  limit?: number;
-};
+type BlogEditData = Prisma.BlogGetPayload<{
+  include: { htmlContent: { select: { content: true } } };
+}>;
 
 // ─── Create ───────────────────────────────────────────────────────────────────
 
@@ -50,33 +37,24 @@ export async function createBlog(
   }
 
   try {
-    const result = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const htmlContent = await tx.htmlContent.create({
-          data: { content },
-        });
-
-        const blog = await tx.blog.create({
-          data: {
-            title,
-            desc,
-            category,
-            keywords: keywords ?? [],
-            image,
-            status: status ?? "show",
-            lang,
-            contentId: htmlContent.id,
-          },
-        });
-
-        return blog;
+    const blog = await prisma.blog.create({
+      data: {
+        title,
+        desc,
+        category,
+        keywords: keywords ?? [],
+        image,
+        status: status ?? "show",
+        lang,
+        htmlContent: { create: { content } },
       },
-    );
+      select: { id: true },
+    });
 
-    revalidatePath("/blog");
-    return { success: true, data: { blogId: result.id } };
+    revalidateBlogPaths();
+    return { success: true, data: { blogId: blog.id } };
   } catch (error: unknown) {
-    if (isPrismaUniqueError(error)) {
+    if (getPrismaCode(error) === "P2002") {
       return { success: false, error: "A blog with this title already exists" };
     }
     console.error("[createBlog]", error);
@@ -85,10 +63,6 @@ export async function createBlog(
 }
 
 // ─── Get All (with filters) ───────────────────────────────────────────────────
-
-type BlogWithCount = Prisma.BlogGetPayload<{
-  include: { _count: { select: { comments: true; likes: true } } };
-}>;
 
 export async function getBlogs(filters: GetBlogsFilters = {}): Promise<
   ActionResult<{
@@ -142,11 +116,13 @@ export async function getBlogs(filters: GetBlogsFilters = {}): Promise<
   }
 }
 
-// ─── Get By ID or Slug (title) ────────────────────────────────────────────────
+// ─── Get By ID / Title / Edit ─────────────────────────────────────────────────
 
 export async function getBlogById(
   id: string,
-): Promise<ActionResult<Awaited<ReturnType<typeof fetchBlogById>>>> {
+): Promise<
+  ActionResult<NonNullable<Awaited<ReturnType<typeof fetchBlogById>>>>
+> {
   try {
     const blog = await fetchBlogById(id);
 
@@ -161,7 +137,9 @@ export async function getBlogById(
 
 export async function getBlogByTitle(
   title: string,
-): Promise<ActionResult<Awaited<ReturnType<typeof fetchBlogByTitle>>>> {
+): Promise<
+  ActionResult<NonNullable<Awaited<ReturnType<typeof fetchBlogByTitle>>>>
+> {
   try {
     const blog = await fetchBlogByTitle(title);
 
@@ -174,6 +152,24 @@ export async function getBlogByTitle(
   }
 }
 
+export async function getBlogForEdit(
+  id: string,
+): Promise<ActionResult<BlogEditData>> {
+  try {
+    const blog = await prisma.blog.findUnique({
+      where: { id },
+      include: { htmlContent: { select: { content: true } } },
+    });
+
+    if (!blog) return { success: false, error: "Blog not found" };
+
+    return { success: true, data: blog };
+  } catch (error) {
+    console.error("[getBlogForEdit]", error);
+    return { success: false, error: "Failed to fetch blog" };
+  }
+}
+
 // ─── Update ───────────────────────────────────────────────────────────────────
 
 export async function updateBlog(
@@ -182,36 +178,31 @@ export async function updateBlog(
 ): Promise<ActionResult<{ blogId: string }>> {
   const { content, ...blogFields } = input;
 
+  if (hasEmptyField(input)) {
+    return { success: false, error: "Missing required fields" };
+  }
+
+  const hasContent = !!content && content.length > 0;
+
   try {
-    const existing = await prisma.blog.findUnique({
+    await prisma.blog.update({
       where: { id },
-      select: { contentId: true },
+      data: {
+        ...blogFields,
+        ...(hasContent && { htmlContent: { update: { content } } }),
+      },
     });
 
-    if (!existing) return { success: false, error: "Blog not found" };
-
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      if (content && content.length > 0) {
-        await tx.htmlContent.update({
-          where: { id: existing.contentId },
-          data: { content },
-        });
-      }
-
-      if (Object.keys(blogFields).length > 0) {
-        await tx.blog.update({
-          where: { id },
-          data: blogFields,
-        });
-      }
-    });
-
-    revalidatePath("/blog");
-    revalidatePath(`/blog/${id}`);
+    revalidateBlogPaths(id);
     return { success: true, data: { blogId: id } };
   } catch (error: unknown) {
-    if (isPrismaUniqueError(error)) {
+    const code = getPrismaCode(error);
+
+    if (code === "P2002") {
       return { success: false, error: "A blog with this title already exists" };
+    }
+    if (code === "P2025") {
+      return { success: false, error: "Blog not found" };
     }
     console.error("[updateBlog]", error);
     return { success: false, error: "Failed to update blog" };
@@ -232,14 +223,13 @@ export async function deleteBlog(
     if (!existing) return { success: false, error: "Blog not found" };
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Delete related records first
       await tx.comment.deleteMany({ where: { blogId: id } });
       await tx.like.deleteMany({ where: { blogId: id } });
       await tx.blog.delete({ where: { id } });
       await tx.htmlContent.delete({ where: { id: existing.contentId } });
     });
 
-    revalidatePath("/blog");
+    revalidateBlogPaths(id);
     return { success: true, data: { blogId: id } };
   } catch (error) {
     console.error("[deleteBlog]", error);
@@ -249,33 +239,46 @@ export async function deleteBlog(
 
 // ─── Internal Fetchers ────────────────────────────────────────────────────────
 
+const blogDetailsInclude = {
+  htmlContent: { select: { content: true } },
+  comments: { orderBy: { createdAt: "desc" } },
+  _count: { select: { comments: true, likes: true } },
+} satisfies Prisma.BlogInclude;
+
 async function fetchBlogById(id: string) {
-  return prisma.blog.findUnique({
-    where: { id },
-    include: {
-      comments: { orderBy: { createdAt: "desc" } },
-      _count: { select: { comments: true, likes: true } },
-    },
-  });
+  return prisma.blog.findUnique({ where: { id }, include: blogDetailsInclude });
 }
 
 async function fetchBlogByTitle(title: string) {
   return prisma.blog.findUnique({
     where: { title },
-    include: {
-      comments: { orderBy: { createdAt: "desc" } },
-      _count: { select: { comments: true, likes: true } },
-    },
+    include: blogDetailsInclude,
   });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function isPrismaUniqueError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code: string }).code === "P2002"
-  );
+const REQUIRED_FIELDS = ["title", "desc", "category", "image", "lang"] as const;
+
+function hasEmptyField(input: UpdateBlogInput): boolean {
+  return REQUIRED_FIELDS.some((key) => input[key] !== undefined && !input[key]);
+}
+
+function revalidateBlogPaths(id?: string) {
+  revalidatePath("/");
+  revalidatePath("/blogs");
+  revalidatePath("/blog");
+
+  if (id) {
+    revalidatePath(`/blogs/${id}`);
+    revalidatePath(`/blog/${id}`);
+  }
+}
+
+function getPrismaCode(error: unknown): string | null {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const { code } = error as { code: unknown };
+    return typeof code === "string" ? code : null;
+  }
+  return null;
 }
